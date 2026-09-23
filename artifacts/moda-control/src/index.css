@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 42 43% 95%;
+  --foreground: 224 28% 19%;
+  --border: 36 24% 86%;
+  --input: 36 24% 81%;
+  --ring: 13 62% 53%;
+  --card: 42 50% 98%;
+  --card-foreground: 224 28% 19%;
+  --card-border: 36 28% 88%;
+  --primary: 13 62% 53%;
+  --primary-foreground: 42 50% 98%;
+  --secondary: 202 31% 87%;
+  --secondary-foreground: 205 34% 26%;
+  --muted: 39 25% 91%;
+  --muted-foreground: 221 12% 49%;
+  --accent: 158 24% 78%;
+  --accent-foreground: 166 29% 25%;
+  --destructive: 1 58% 47%;
+  --destructive-foreground: 42 50% 98%;
+  --app-font-sans: 'DM Sans', sans-serif;
+  --app-font-serif: 'Instrument Serif', Georgia, serif;
+  --app-font-mono: 'Space Mono', monospace;
+  --radius: 0.85rem;
+  --sidebar: 224 28% 19%;
+  --sidebar-foreground: 42 43% 95%;
+  --sidebar-border: 224 24% 27%;
+  --sidebar-primary: 13 62% 53%;
+  --sidebar-primary-foreground: 42 50% 98%;
+}
+
+* { box-sizing: border-box; }
+html { background: hsl(var(--background)); }
+body {
+  margin: 0;
+  min-width: 320px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid hsl(var(--ring) / .23);
+  outline-offset: 2px;
+}
+
+.serif { font-family: var(--app-font-serif); }
+.mono { font-family: var(--app-font-mono); }
+.app-shell { min-height: 100dvh; background: hsl(var(--background)); }
+.sidebar {
+  background: hsl(var(--sidebar));
+  color: hsl(var(--sidebar-foreground));
+}
+.soft-grid {
+  background-image: linear-gradient(hsl(36 20% 76% / .13) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(36 20% 76% / .13) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.paper-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--card-border));
+  box-shadow: 0 8px 24px hsl(224 28% 19% / .045);
+}
+.paper-card:hover { box-shadow: 0 12px 28px hsl(224 28% 19% / .08); }
+.nav-pill { transition: background-color .18s ease, color .18s ease, transform .18s ease; }
+.nav-pill:active { transform: translateY(1px); }
+.fade-in { animation: fade-in .35s ease both; }
+.rise-in { animation: rise-in .4s ease both; }
+.stagger-1 { animation-delay: .05s; }
+.stagger-2 { animation-delay: .1s; }
+.stagger-3 { animation-delay: .15s; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
