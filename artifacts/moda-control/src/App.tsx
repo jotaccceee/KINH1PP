@@ -326,7 +326,7 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
   </div>;
 }
 
-function Customers({ store, setStore, openForm, setOpenForm }: { store: Store; setStore: React.Dispatch<React.SetStateAction<Store>>; openForm: boolean; setOpenForm: (v: boolean) => void }) {
+function CustomersLegacy({ store, setStore, openForm, setOpenForm }: { store: Store; setStore: React.Dispatch<React.SetStateAction<Store>>; openForm: boolean; setOpenForm: (v: boolean) => void }) {
   const [search, setSearch] = useState(''); const [paying, setPaying] = useState<Customer | null>(null); const [payment, setPayment] = useState('');
   const [form, setForm] = useState({ name: '', phone: '', notes: '' });
   const balances = (customerId: string) => store.sales.filter((s) => s.customerId === customerId).reduce((sum, s) => sum + saleBalance(s), 0);
@@ -336,6 +336,111 @@ function Customers({ store, setStore, openForm, setOpenForm }: { store: Store; s
   const collect = (e: FormEvent) => { e.preventDefault(); if (!paying) return; const amount = Number(payment); if (!amount || amount <= 0) return; let remaining = amount; setStore((s) => ({ ...s, sales: s.sales.map((sale) => { if (sale.customerId !== paying.id || remaining <= 0) return sale; const total = saleTotal(sale); const due = saleBalance(sale); const applied = Math.min(due, remaining); remaining -= applied; const paid = sale.paidAmount + applied; return { ...sale, paidAmount: paid, saldoPendiente: Math.max(0, total - paid), status: paid >= total ? 'Cobrado' : 'Seña / Pago Parcial' }; }) })); setPaying(null); setPayment(''); };
   const remove = (id: string) => { if (window.confirm('¿Eliminar este cliente?')) setStore((s) => ({ ...s, customers: s.customers.filter((c) => c.id !== id) })); };
   return <div className="space-y-5 fade-in"><div className="grid gap-5 xl:grid-cols-[1fr_1.1fr]"><section className="paper-card rounded-2xl p-5 sm:p-6"><div className="mb-5 flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-[.1em] text-[hsl(var(--primary))]">Por cobrar</p><h2 className="serif mt-1 text-2xl">Cuentas pendientes</h2></div><div className="rounded-xl bg-[#e9e0f0] px-3 py-2 text-right text-[#574064]"><p className="mono text-lg font-bold">{money(debts.reduce((sum, d) => sum + d.amount, 0))}</p><p className="text-[10px] font-bold uppercase tracking-wider">total fiado</p></div></div>{debts.length ? <div className="space-y-2">{debts.map(({ customer, amount, sales }) => <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] p-3" key={customer.id}><div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#e9e0f0] font-bold text-[#574064]">{customer.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{customer.name}</p><p className="text-xs text-[hsl(var(--muted-foreground))]">{sales.length} {sales.length === 1 ? 'venta pendiente' : 'ventas pendientes'}</p></div><div className="text-right"><p className="font-bold text-[#773e31]">{money(amount)}</p><button data-testid={`button-collect-${customer.id}`} onClick={() => setPaying(customer)} className="mt-1 text-xs font-bold text-[hsl(var(--primary))] hover:underline">Registrar cobro</button></div></div>)}</div> : <EmptyState icon={Check} title="Todo al día" detail="No hay deudas pendientes para cobrar." />}</section><section className="paper-card rounded-2xl p-5 sm:p-6"><div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.1em] text-[hsl(var(--muted-foreground))]">Tu agenda</p><h2 className="serif mt-1 text-2xl">Clientes</h2></div><Button title="nuevo cliente" onClick={() => setOpenForm(true)}><Plus size={16} /> Nuevo cliente</Button></div><div className="relative mb-4"><Search size={16} className="absolute left-3 top-3 text-[hsl(var(--muted-foreground))]" /><Input data-testid="input-search-customers" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente..." className="pl-9" /></div>{customers.length ? <div className="space-y-1">{customers.map((customer) => <div className="group flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-[hsl(var(--muted))]" key={customer.id}><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dbece0] text-xs font-bold text-[#244d3b]">{customer.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{customer.name}</p><p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{customer.phone || 'Sin teléfono'}{customer.notes ? ` · ${customer.notes}` : ''}</p></div>{balances(customer.id) > 0 && <Badge tone="orange">{money(balances(customer.id))}</Badge>}<button data-testid={`button-delete-customer-${customer.id}`} onClick={() => remove(customer.id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] opacity-0 hover:bg-red-50 hover:text-red-700 group-hover:opacity-100" aria-label={`Eliminar ${customer.name}`}><Trash2 size={15} /></button></div>)}</div> : <EmptyState icon={UserRound} title="No encontramos clientes" detail="Probá con otro nombre." />}</section></div><Modal open={openForm} onClose={() => setOpenForm(false)} title="Sumar un cliente"><form onSubmit={submit} className="space-y-5"><Field label="Nombre y apellido"><Input data-testid="input-customer-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Valentina Gómez" /></Field><Field label="Teléfono"><Input data-testid="input-customer-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Ej. 11 5555 1234" /></Field><Field label="Notas" hint="Un talle, una preferencia o algo para recordar."><Textarea data-testid="input-customer-notes" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Ej. Le gusta recibir novedades..." /></Field><div className="flex justify-end gap-2"><Button variant="outline" title="cancelar" onClick={() => setOpenForm(false)}>Cancelar</Button><Button title="guardar cliente" type="submit"><Check size={16} /> Guardar cliente</Button></div></form></Modal><Modal open={!!paying} onClose={() => setPaying(null)} title="Registrar un cobro"><form onSubmit={collect} className="space-y-5"><div className="rounded-xl bg-[#e9e0f0] p-4 text-[#574064]"><p className="text-xs uppercase tracking-wider">Cliente</p><p className="mt-1 font-bold">{paying?.name}</p><p className="mt-2 text-sm">Saldo pendiente: <b>{paying ? money(balances(paying.id)) : '$ 0'}</b></p></div><Field label="Monto recibido"><Input data-testid="input-payment-amount" required min="1" type="number" value={payment} onChange={(e) => setPayment(e.target.value)} placeholder="$" /></Field><p className="text-xs text-[hsl(var(--muted-foreground))]">El monto se aplica a las ventas más antiguas primero.</p><div className="flex justify-end gap-2"><Button variant="outline" title="cancelar" onClick={() => setPaying(null)}>Cancelar</Button><Button title="confirmar cobro" type="submit"><Check size={16} /> Confirmar cobro</Button></div></form></Modal></div>;
+}
+
+function Customers({ store, setStore, openForm, setOpenForm }: { store: Store; setStore: React.Dispatch<React.SetStateAction<Store>>; openForm: boolean; setOpenForm: (v: boolean) => void }) {
+  const [search, setSearch] = useState('');
+  const [debtSearch, setDebtSearch] = useState('');
+  const [paying, setPaying] = useState<Customer | null>(null);
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const [payment, setPayment] = useState('');
+  const [form, setForm] = useState({ name: '', phone: '', notes: '' });
+  const balances = (customerId: string) => store.sales.filter((sale) => sale.customerId === customerId).reduce((sum, sale) => sum + saleBalance(sale), 0);
+  const customers = store.customers.filter((customer) => customer.name.toLowerCase().includes(search.toLowerCase()));
+  const debts = store.customers.map((customer) => ({
+    customer,
+    amount: balances(customer.id),
+    sales: store.sales.filter((sale) => sale.customerId === customer.id && saleBalance(sale) > 0),
+  })).filter((debt) => debt.amount > 0);
+  const filteredDebts = debts.filter(({ customer }) => `${customer.name} ${customer.phone}`.toLowerCase().includes(debtSearch.toLowerCase()));
+  const viewingSales = viewingCustomer
+    ? store.sales.filter((sale) => sale.customerId === viewingCustomer.id).sort((a, b) => b.date.localeCompare(a.date))
+    : [];
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    setStore((storeState) => ({ ...storeState, customers: [{ id: uid('c'), ...form, createdAt: today() }, ...storeState.customers] }));
+    setForm({ name: '', phone: '', notes: '' });
+    setOpenForm(false);
+  };
+  const collect = (e: FormEvent) => {
+    e.preventDefault();
+    if (!paying) return;
+    const amount = Number(payment);
+    if (!amount || amount <= 0) return;
+    let remaining = amount;
+    setStore((storeState) => ({
+      ...storeState,
+      sales: storeState.sales.map((sale) => {
+        if (sale.customerId !== paying.id || remaining <= 0) return sale;
+        const total = saleTotal(sale);
+        const due = saleBalance(sale);
+        const applied = Math.min(due, remaining);
+        remaining -= applied;
+        const paid = sale.paidAmount + applied;
+        return { ...sale, paidAmount: paid, saldoPendiente: Math.max(0, total - paid), status: paid >= total ? 'Cobrado' : 'Seña / Pago Parcial' };
+      }),
+    }));
+    setPaying(null);
+    setPayment('');
+  };
+  const remove = (id: string) => {
+    if (window.confirm('¿Eliminar este cliente?')) setStore((storeState) => ({ ...storeState, customers: storeState.customers.filter((customer) => customer.id !== id) }));
+  };
+  const openDebtDetails = (customer: Customer) => setViewingCustomer(customer);
+  const handleDebtKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, customer: Customer) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openDebtDetails(customer);
+    }
+  };
+
+  return <div className="space-y-5 fade-in">
+    <div className="grid gap-5 xl:grid-cols-[1fr_1.1fr]">
+      <section className="paper-card rounded-2xl p-5 sm:p-6">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div><p className="text-xs font-bold uppercase tracking-[.1em] text-[hsl(var(--primary))]">Por cobrar</p><h2 className="serif mt-1 text-2xl">Cuentas pendientes</h2></div>
+          <div className="rounded-xl bg-[#e9e0f0] px-3 py-2 text-right text-[#574064]"><p className="mono text-lg font-bold">{money(debts.reduce((sum, debt) => sum + debt.amount, 0))}</p><p className="text-[10px] font-bold uppercase tracking-wider">total fiado</p></div>
+        </div>
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3 top-3 text-[hsl(var(--muted-foreground))]" />
+          <Input data-testid="input-search-debts" value={debtSearch} onChange={(e) => setDebtSearch(e.target.value)} placeholder="Buscar cliente con deuda..." className="pl-9" />
+        </div>
+        <p className="mb-3 text-xs text-[hsl(var(--muted-foreground))]">{filteredDebts.length} {filteredDebts.length === 1 ? 'cliente con deuda' : 'clientes con deuda'}</p>
+        {filteredDebts.length ? <div className="space-y-2">{filteredDebts.map(({ customer, amount, sales }) => <div
+          className="flex cursor-pointer items-center gap-3 rounded-xl border border-[hsl(var(--border))] p-3 transition hover:border-[hsl(var(--primary)/.45)] hover:bg-[hsl(var(--muted)/.35)]"
+          key={customer.id}
+          role="button"
+          tabIndex={0}
+          onClick={() => openDebtDetails(customer)}
+          onKeyDown={(event) => handleDebtKeyDown(event, customer)}
+          aria-label={`Ver compras de ${customer.name}`}
+        >
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#e9e0f0] font-bold text-[#574064]">{customer.name.split(' ').map((name) => name[0]).slice(0, 2).join('')}</div>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{customer.name}</p><p className="text-xs text-[hsl(var(--muted-foreground))]">{sales.length} {sales.length === 1 ? 'venta pendiente' : 'ventas pendientes'} · Ver compras</p></div>
+          <div className="text-right"><p className="font-bold text-[#773e31]">{money(amount)}</p><div className="mt-1 flex items-center justify-end gap-2"><button data-testid={`button-view-debt-${customer.id}`} onClick={(event) => { event.stopPropagation(); openDebtDetails(customer); }} className="text-xs font-bold text-[hsl(var(--primary))] hover:underline">Ver detalle</button><button data-testid={`button-collect-${customer.id}`} onClick={(event) => { event.stopPropagation(); setPaying(customer); }} className="text-xs font-bold text-[hsl(var(--primary))] hover:underline">Registrar cobro</button></div></div>
+        </div>)}</div> : <EmptyState icon={debtSearch ? Search : Check} title={debtSearch ? 'No encontramos deudores' : 'Todo al día'} detail={debtSearch ? 'Probá buscar por otro nombre o teléfono.' : 'No hay deudas pendientes para cobrar.'} />}
+      </section>
+      <section className="paper-card rounded-2xl p-5 sm:p-6">
+        <div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.1em] text-[hsl(var(--muted-foreground))]">Tu agenda</p><h2 className="serif mt-1 text-2xl">Clientes</h2></div><Button title="nuevo cliente" onClick={() => setOpenForm(true)}><Plus size={16} /> Nuevo cliente</Button></div>
+        <div className="relative mb-4"><Search size={16} className="absolute left-3 top-3 text-[hsl(var(--muted-foreground))]" /><Input data-testid="input-search-customers" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente..." className="pl-9" /></div>
+        {customers.length ? <div className="space-y-1">{customers.map((customer) => <div className="group flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-[hsl(var(--muted))]" key={customer.id}><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dbece0] text-xs font-bold text-[#244d3b]">{customer.name.split(' ').map((name) => name[0]).slice(0, 2).join('')}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{customer.name}</p><p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{customer.phone || 'Sin teléfono'}{customer.notes ? ` · ${customer.notes}` : ''}</p></div>{balances(customer.id) > 0 && <Badge tone="orange">{money(balances(customer.id))}</Badge>}<button data-testid={`button-delete-customer-${customer.id}`} onClick={() => remove(customer.id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] opacity-0 hover:bg-red-50 hover:text-red-700 group-hover:opacity-100" aria-label={`Eliminar ${customer.name}`}><Trash2 size={15} /></button></div>)}</div> : <EmptyState icon={UserRound} title="No encontramos clientes" detail="Probá con otro nombre." />}
+      </section>
+    </div>
+    <Modal open={!!viewingCustomer} onClose={() => setViewingCustomer(null)} title="Detalle de compras" width="max-w-2xl">
+      {viewingCustomer && <div className="space-y-4">
+        <div className="rounded-2xl bg-[#e9e0f0] p-4 text-[#574064]"><p className="text-xs font-bold uppercase tracking-[.1em] opacity-70">Cliente</p><p className="mt-1 text-lg font-bold">{viewingCustomer.name}</p><p className="mt-1 text-sm">{viewingCustomer.phone || 'Sin teléfono'}</p><p className="mt-3 text-sm">Saldo pendiente: <b>{money(balances(viewingCustomer.id))}</b></p></div>
+        {viewingSales.length ? <div className="space-y-3">{viewingSales.map((sale) => <div className="rounded-2xl border border-[hsl(var(--border))] p-4" key={sale.id}>
+          <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.08em] text-[hsl(var(--muted-foreground))]">{fullDate(sale.date)}</p><p className="mt-1 text-sm font-semibold">{sale.method}</p></div><Badge tone={sale.status === 'Cobrado' ? 'green' : 'orange'}>{sale.status}</Badge></div>
+          <div className="mt-3 space-y-2">{saleItems(sale).map((item, index) => <div className="flex items-start justify-between gap-3 rounded-xl bg-[hsl(var(--muted)/.45)] px-3 py-2" key={`${sale.id}-detail-${index}`}><div><p className="text-sm font-bold">{item.productName}</p><p className="text-xs text-[hsl(var(--muted-foreground))]">{item.size} · x{item.quantity}{item.detail ? ` · ${item.detail}` : ''}</p></div><p className="text-sm font-semibold">{money(item.quantity * item.unitPrice)}</p></div>)}</div>
+          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[hsl(var(--border))] pt-3 text-xs"><div><p className="text-[hsl(var(--muted-foreground))]">Total</p><p className="mt-1 font-bold">{money(saleTotal(sale))}</p></div><div><p className="text-[hsl(var(--muted-foreground))]">Cobrado</p><p className="mt-1 font-bold text-[#244d3b]">{money(sale.paidAmount)}</p></div><div><p className="text-[hsl(var(--muted-foreground))]">Pendiente</p><p className="mt-1 font-bold text-[#773e31]">{money(saleBalance(sale))}</p></div></div>
+        </div>)}</div> : <EmptyState icon={ShoppingBag} title="Sin compras registradas" detail="Este cliente todavía no tiene ventas asociadas." />}
+        <div className="flex justify-end"><Button variant="outline" title="cerrar detalle" onClick={() => setViewingCustomer(null)}>Cerrar</Button></div>
+      </div>}
+    </Modal>
+    <Modal open={openForm} onClose={() => setOpenForm(false)} title="Sumar un cliente"><form onSubmit={submit} className="space-y-5"><Field label="Nombre y apellido"><Input data-testid="input-customer-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Valentina Gómez" /></Field><Field label="Teléfono"><Input data-testid="input-customer-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Ej. 11 5555 1234" /></Field><Field label="Notas" hint="Un talle, una preferencia o algo para recordar."><Textarea data-testid="input-customer-notes" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Ej. Le gusta recibir novedades..." /></Field><div className="flex justify-end gap-2"><Button variant="outline" title="cancelar" onClick={() => setOpenForm(false)}>Cancelar</Button><Button title="guardar cliente" type="submit"><Check size={16} /> Guardar cliente</Button></div></form></Modal>
+    <Modal open={!!paying} onClose={() => setPaying(null)} title="Registrar un cobro"><form onSubmit={collect} className="space-y-5"><div className="rounded-xl bg-[#e9e0f0] p-4 text-[#574064]"><p className="text-xs uppercase tracking-wider">Cliente</p><p className="mt-1 font-bold">{paying?.name}</p><p className="mt-2 text-sm">Saldo pendiente: <b>{paying ? money(balances(paying.id)) : '$ 0'}</b></p></div><Field label="Monto recibido"><Input data-testid="input-payment-amount" required min="1" type="number" value={payment} onChange={(e) => setPayment(e.target.value)} placeholder="$" /></Field><p className="text-xs text-[hsl(var(--muted-foreground))]">El monto se aplica a las ventas más antiguas primero.</p><div className="flex justify-end gap-2"><Button variant="outline" title="cancelar" onClick={() => setPaying(null)}>Cancelar</Button><Button title="confirmar cobro" type="submit"><Check size={16} /> Confirmar cobro</Button></div></form></Modal>
+  </div>;
 }
 
 function Inventory({ store, setStore, openForm, setOpenForm }: { store: Store; setStore: React.Dispatch<React.SetStateAction<Store>>; openForm: boolean; setOpenForm: (v: boolean) => void }) {
