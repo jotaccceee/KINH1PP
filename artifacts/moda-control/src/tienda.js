@@ -79,7 +79,7 @@ function productCard(product) {
     <article class="overflow-hidden rounded-3xl border border-[#ded8cf] bg-[#fffdfa] shadow-[0_14px_35px_rgba(37,41,56,.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(37,41,56,.1)]">
       <div class="product-image image-fallback relative grid place-items-center text-[#773e31]">
         ${image}
-        <div class="${imageUrl ? 'hidden' : ''} absolute inset-0 grid place-items-center text-sm font-semibold">Moda Control</div>
+        <div class="${imageUrl ? 'hidden' : ''} absolute inset-0 grid place-items-center text-sm font-semibold">KINSH1P</div>
       </div>
       <div class="p-5">
         <p class="text-[11px] font-bold uppercase tracking-[.12em] text-[#a1a0a5]">${escapeHtml(product.category)}</p>
@@ -103,7 +103,7 @@ function render() {
       <div class="mx-auto max-w-6xl">
         <div class="flex items-center gap-3">
           <span class="grid h-10 w-10 place-items-center rounded-xl bg-[#d86343] text-lg font-bold">M</span>
-          <div><p class="serif text-2xl leading-none">Moda Control</p><p class="mt-1 text-[10px] uppercase tracking-[.18em] text-white/55">Tienda</p></div>
+          <div><p class="serif text-2xl leading-none">KINSH1P</p><p class="mt-1 text-[10px] uppercase tracking-[.18em] text-white/55">Tienda</p></div>
         </div>
       </div>
     </header>

@@ -33,7 +33,7 @@
 }
 
 :root {
-  --background: 42 28% 89%;
+  --background: 216 42% 14%;
   --foreground: 224 28% 19%;
   --border: 36 24% 86%;
   --input: 36 24% 81%;
@@ -82,6 +82,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .serif { font-family: var(--app-font-serif); }
 .mono { font-family: var(--app-font-mono); }
 .app-shell { min-height: 100dvh; background: hsl(var(--background)); }
+.app-shell > main { color: hsl(42 50% 98%); }
 .sidebar {
   background: hsl(var(--sidebar));
   color: hsl(var(--sidebar-foreground));
@@ -93,6 +94,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .paper-card {
   background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
   border: 1px solid hsl(var(--card-border));
   box-shadow: 0 8px 24px hsl(224 28% 19% / .045);
 }
