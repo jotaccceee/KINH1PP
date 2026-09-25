@@ -298,7 +298,7 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
                     className="pl-9"
                     aria-label={`Buscar prenda ${index + 1}`}
                   />
-                  {activeProductSearch === index && <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1 shadow-xl">
+                  {activeProductSearch === index && <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1 text-[hsl(var(--card-foreground))] shadow-xl">
                     {store.products.filter((product) => `${product.name} ${product.size}`.toLowerCase().includes(item.productSearch.toLowerCase())).length ? store.products.filter((product) => `${product.name} ${product.size}`.toLowerCase().includes(item.productSearch.toLowerCase())).map((product) => <button
                       type="button"
                       key={product.id}
