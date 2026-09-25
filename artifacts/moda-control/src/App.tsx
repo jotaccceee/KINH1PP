@@ -10,8 +10,8 @@ type PaymentMethod = 'Efectivo' | 'Transferencia' | 'Mercado Pago';
 type SaleStatus = 'Cobrado' | 'Pendiente' | 'Seña / Pago Parcial';
 type Customer = { id: string; name: string; phone: string; notes: string; createdAt: string };
 type Product = { id: string; category: string; name: string; size: string; cost: number; price: number; stock: number; image_url?: string };
-type SaleItem = { productId: string; productName: string; size: string; quantity: number; unitPrice: number };
-type SaleFormItem = { productId: string; productName: string; size: string; quantity: string; unitPrice: string };
+type SaleItem = { productId: string; productName: string; size: string; detail?: string; quantity: number; unitPrice: number };
+type SaleFormItem = { productId: string; productName: string; size: string; detail: string; quantity: string; unitPrice: string; productSearch: string };
 type Sale = {
   id: string; date: string; customerId: string; customerName: string; productId: string;
   productName: string; size: string; quantity: number; unitPrice: number; method: PaymentMethod;
@@ -201,11 +201,12 @@ function LegacySales({ store, setStore, openForm, setOpenForm }: { store: Store;
 }
 
 function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setStore: React.Dispatch<React.SetStateAction<Store>>; openForm: boolean; setOpenForm: (v: boolean) => void }) {
-  const emptyItem = (): SaleFormItem => ({ productId: '', productName: '', size: '', quantity: '1', unitPrice: '' });
+  const emptyItem = (): SaleFormItem => ({ productId: '', productName: '', size: '', detail: '', quantity: '1', unitPrice: '', productSearch: '' });
   const initialForm = () => ({ date: today(), customerName: '', customerPhone: '', items: [emptyItem()], method: 'Efectivo' as PaymentMethod, status: 'Cobrado' as SaleStatus, paidAmount: '0' });
   const [statusFilter, setStatusFilter] = useState<'Todos' | SaleStatus>('Todos');
   const [query, setQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [activeProductSearch, setActiveProductSearch] = useState<number | null>(null);
   const [saleForm, setSaleForm] = useState(initialForm);
   const total = saleForm.items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
   const paidAmount = saleForm.status === 'Cobrado' ? total : Math.min(total, Math.max(0, Number(saleForm.paidAmount) || 0));
@@ -222,13 +223,14 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
   };
   const selectProduct = (index: number, productId: string) => {
     const product = store.products.find((item) => item.id === productId);
-    updateItem(index, { productId, productName: product?.name || '', size: product?.size || '', unitPrice: product ? String(product.price) : '' });
+    updateItem(index, { productId, productName: product?.name || '', productSearch: product?.name || '', size: product?.size || '', unitPrice: product ? String(product.price) : '' });
+    setActiveProductSearch(null);
   };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const customerName = saleForm.customerName.trim();
     const customerPhone = saleForm.customerPhone.trim();
-    const items: SaleItem[] = saleForm.items.map((item) => ({ productId: item.productId, productName: item.productName.trim(), size: item.size.trim(), quantity: Number(item.quantity), unitPrice: Number(item.unitPrice) }));
+     const items: SaleItem[] = saleForm.items.map((item) => ({ productId: item.productId, productName: item.productName.trim(), size: item.size.trim(), detail: item.detail.trim(), quantity: 1, unitPrice: Number(item.unitPrice) }));
     if (!customerName || !items.length || items.some((item) => !item.productId || !item.productName || !item.quantity || item.quantity < 1 || !item.unitPrice || item.unitPrice < 0) || total <= 0) return;
     const storedPaidAmount = saleForm.status === 'Cobrado' ? total : Math.min(total, Math.max(0, Number(saleForm.paidAmount) || 0));
     const storedSaldoPendiente = Math.max(0, total - storedPaidAmount);
@@ -253,7 +255,8 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
         products: prev.products.map((product) => quantitiesByProduct[product.id] ? { ...product, stock: Math.max(0, product.stock - quantitiesByProduct[product.id]) } : product),
       };
     });
-    setSaleForm(initialForm());
+     setSaleForm(initialForm());
+     setActiveProductSearch(null);
     setOpenForm(false);
   };
 
@@ -273,7 +276,44 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
         <div className="space-y-3">
           {saleForm.items.map((item, index) => <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--muted)/.28)] p-4" key={index}>
             <div className="mb-3 flex items-center justify-between"><p className="text-sm font-bold">Prenda {index + 1}</p>{saleForm.items.length > 1 && <button type="button" data-testid={`button-remove-sale-item-${index}`} onClick={() => setSaleForm((form) => ({ ...form, items: form.items.filter((_, itemIndex) => itemIndex !== index) }))} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-red-700 hover:bg-red-50"><Trash2 size={14} /> Quitar</button>}</div>
-            <div className="grid gap-3 sm:grid-cols-[1.7fr_.7fr_.55fr_.8fr]"><Field label="Prenda del inventario"><Select data-testid={`select-sale-product-${index}`} required value={item.productId} onChange={(e) => selectProduct(index, e.target.value)}><option value="">Elegir prenda</option>{store.products.map((product) => <option key={product.id} value={product.id}>{product.name} · {product.size} · {product.stock} u.</option>)}</Select></Field><Field label="Talle"><Input data-testid={`input-sale-size-${index}`} required value={item.size} onChange={(e) => updateItem(index, { size: e.target.value })} placeholder="Ej. M" /></Field><Field label="Cantidad"><Input data-testid={`input-sale-quantity-${index}`} required type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, { quantity: e.target.value })} /></Field><Field label="Precio unitario"><Input data-testid={`input-sale-price-${index}`} required type="number" min="0" value={item.unitPrice} onChange={(e) => updateItem(index, { unitPrice: e.target.value })} placeholder="$" /></Field></div>
+            <div className="grid gap-3 sm:grid-cols-[1.7fr_.7fr_.95fr_.8fr]">
+              <Field label="Elegir prenda">
+                <div className="relative">
+                  <Search size={16} className="pointer-events-none absolute left-3 top-3 text-[hsl(var(--muted-foreground))]" />
+                  <Input
+                    data-testid={`input-search-sale-product-${index}`}
+                    required
+                    value={item.productSearch}
+                    onFocus={() => setActiveProductSearch(index)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const match = store.products.find((product) => `${product.name} ${product.size}`.toLowerCase() === value.trim().toLowerCase());
+                      updateItem(index, match
+                        ? { productId: match.id, productName: match.name, productSearch: value, size: match.size, unitPrice: String(match.price) }
+                        : { productId: '', productName: '', productSearch: value });
+                      setActiveProductSearch(index);
+                    }}
+                    onBlur={() => window.setTimeout(() => setActiveProductSearch((active) => active === index ? null : active), 120)}
+                    placeholder="Buscar prenda..."
+                    className="pl-9"
+                    aria-label={`Buscar prenda ${index + 1}`}
+                  />
+                  {activeProductSearch === index && <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1 shadow-xl">
+                    {store.products.filter((product) => `${product.name} ${product.size}`.toLowerCase().includes(item.productSearch.toLowerCase())).length ? store.products.filter((product) => `${product.name} ${product.size}`.toLowerCase().includes(item.productSearch.toLowerCase())).map((product) => <button
+                      type="button"
+                      key={product.id}
+                      data-testid={`option-sale-product-${index}-${product.id}`}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectProduct(index, product.id)}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-[hsl(var(--muted))]"
+                    ><span><b>{product.name}</b><span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">{product.size}</span></span><span className="text-xs text-[hsl(var(--muted-foreground))]">{product.stock} u.</span></button>) : <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">No encontramos prendas.</p>}
+                  </div>}
+                </div>
+              </Field>
+              <Field label="Talle"><Input data-testid={`input-sale-size-${index}`} required value={item.size} onChange={(e) => updateItem(index, { size: e.target.value })} placeholder="Ej. M" /></Field>
+              <Field label="Detalle"><Input data-testid={`input-sale-detail-${index}`} value={item.detail} onChange={(e) => updateItem(index, { detail: e.target.value })} placeholder="Ej. Color beige" /></Field>
+              <Field label="Precio unitario"><Input data-testid={`input-sale-price-${index}`} type="number" min="0" required value={item.unitPrice} onChange={(e) => updateItem(index, { unitPrice: e.target.value })} placeholder="$" /></Field>
+            </div>
           </div>)}
           <Button variant="outline" title="agregar otra prenda" onClick={() => setSaleForm((form) => ({ ...form, items: [...form.items, emptyItem()] }))}><Plus size={16} /> Agregar otra prenda</Button>
         </div>
