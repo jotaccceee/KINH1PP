@@ -1,15 +1,16 @@
-# [Project name]
+# KINSH1P
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Panel web para administrar ventas, cobros, clientes, inventario y gastos de un emprendimiento de ropa.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server
+- `pnpm --filter @workspace/moda-control run dev` — run the panel web
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — PostgreSQL connection string (provided by the Replit database)
 
 ## Stack
 
@@ -22,23 +23,30 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/moda-control/src/App.tsx` — panel UI; loads and saves the complete store through `/api/state`.
+- `artifacts/moda-control/src/tienda.js` — public catalog; loads available products through `/api/catalog`.
+- `artifacts/api-server/src/routes/state.ts` — state and catalog API, revision checks, payments, and activity history.
+- `lib/db/src/schema/commerce.ts` — PostgreSQL tables for customers, products, sales, sale items, expenses, payments, activity, and sync revision.
+- Run `pnpm --filter @workspace/db run push` after schema changes.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- PostgreSQL is the only source of truth; browser storage is not used for business data.
+- State writes use a database revision checked under a row lock to avoid silently overwriting another device's changes.
+- The web panel refreshes state on focus and every five seconds; the public catalog refreshes on the same interval.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+KINSH1P centralizes the shop's product catalog, stock, sales, payments, customers, debts, and expenses so the same information is available from every device.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+La interfaz y los mensajes visibles para el usuario están en español rioplatense.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The API must be running for the panel and public catalog to load.
+- A write conflict reloads the latest server state instead of overwriting another device silently.
 
 ## Pointers
 

@@ -1,35 +1,3 @@
-const STORAGE_KEY = 'moda-control-store-v1';
-
-const fallbackProducts = [
-  {
-    id: 'fallback-campera',
-    category: 'Abrigos',
-    name: 'Campera Roma',
-    size: 'M',
-    price: 79000,
-    stock: 2,
-    image_url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'fallback-jean',
-    category: 'Pantalones',
-    name: 'Jean Oslo',
-    size: '38',
-    price: 52000,
-    stock: 7,
-    image_url: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'fallback-remera',
-    category: 'Básicos',
-    name: 'Remera Nube',
-    size: 'S',
-    price: 25000,
-    stock: 1,
-    image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80',
-  },
-];
-
 const root = document.querySelector('#catalog-root');
 const money = (value) =>
   new Intl.NumberFormat('es-AR', {
@@ -53,17 +21,6 @@ function safeImageUrl(value) {
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
   } catch {
     return '';
-  }
-}
-
-function readProducts() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const store = saved ? JSON.parse(saved) : null;
-    const products = Array.isArray(store?.products) ? store.products : fallbackProducts;
-    return products.filter((product) => Number(product.stock) > 0);
-  } catch {
-    return fallbackProducts.filter((product) => product.stock > 0);
   }
 }
 
@@ -96,8 +53,16 @@ function productCard(product) {
   `;
 }
 
-function render() {
-  const products = readProducts();
+async function render() {
+  let products = [];
+  let errorMessage = '';
+  try {
+    const response = await fetch('/api/catalog', { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Catalog request failed: ${response.status}`);
+    products = await response.json();
+  } catch {
+    errorMessage = 'No pudimos cargar el catálogo. Volvé a intentar en unos minutos.';
+  }
   root.innerHTML = `
     <header class="border-b border-[#ded8cf] bg-[#252938] px-5 py-4 text-[#f8f3ec] sm:px-10">
       <div class="mx-auto max-w-6xl">
@@ -113,7 +78,9 @@ function render() {
         <h1 class="serif mt-2 text-4xl leading-tight sm:text-5xl">Elegí tu próximo favorito.</h1>
         <p class="mt-3 text-sm leading-6 text-[#73747b]">Consultá por WhatsApp y te ayudamos con disponibilidad, medios de pago y entrega.</p>
       </div>
-      ${
+      ${errorMessage
+        ? `<div class="rounded-3xl border border-dashed border-[#c9c3ba] bg-white/50 px-5 py-16 text-center"><h2 class="font-bold">Catálogo no disponible</h2><p class="mx-auto mt-2 max-w-sm text-sm text-[#73747b]">${errorMessage}</p></div>`
+        :
         products.length
           ? `<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">${products.map(productCard).join('')}</div>`
           : `<div class="rounded-3xl border border-dashed border-[#c9c3ba] bg-white/50 px-5 py-16 text-center"><h2 class="font-bold">Estamos preparando la nueva colección</h2><p class="mx-auto mt-2 max-w-sm text-sm text-[#73747b]">No hay prendas disponibles en este momento. Volvé a consultar pronto.</p></div>`
@@ -122,7 +89,5 @@ function render() {
   `;
 }
 
-render();
-window.addEventListener('storage', (event) => {
-  if (event.key === STORAGE_KEY) render();
-});
+void render();
+window.setInterval(() => void render(), 5000);

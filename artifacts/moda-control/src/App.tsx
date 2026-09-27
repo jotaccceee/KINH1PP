@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowDownRight, ArrowUpRight, Banknote, Bell, Boxes, Check, CircleDollarSign, Clock3,
   LayoutDashboard, Menu, Package, Plus, Receipt, Search, Shirt, ShoppingBag, Trash2,
@@ -20,7 +20,6 @@ type Sale = {
 type Expense = { id: string; date: string; concept: string; category: string; amount: number };
 type Store = { customers: Customer[]; products: Product[]; sales: Sale[]; expenses: Expense[] };
 
-const STORAGE_KEY = 'moda-control-store-v1';
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const money = (value: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
@@ -31,49 +30,100 @@ const saleItems = (sale: Sale): SaleItem[] => sale.items?.length ? sale.items : 
 const saleTotal = (sale: Sale) => sale.total ?? saleItems(sale).reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 const saleBalance = (sale: Sale) => Math.max(0, saleTotal(sale) - sale.paidAmount);
 
-const demoStore: Store = {
-  customers: [
-    { id: 'c-1', name: 'Lucía Benítez', phone: '11 5840 2291', notes: 'Prefiere avisos por WhatsApp.', createdAt: '2024-05-08' },
-    { id: 'c-2', name: 'Micaela Ríos', phone: '11 4021 7718', notes: 'Talle M · Retira por el showroom.', createdAt: '2024-05-12' },
-    { id: 'c-3', name: 'Sofía Acosta', phone: '11 6190 3428', notes: '', createdAt: '2024-05-17' },
-    { id: 'c-4', name: 'Carla Duarte', phone: '11 5522 0684', notes: 'Cliente frecuente.', createdAt: '2024-05-19' },
-  ],
-  products: [
-    { id: 'p-1', category: 'Abrigos', name: 'Campera Roma', size: 'M', cost: 42000, price: 79000, stock: 2, image_url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?auto=format&fit=crop&w=800&q=80' },
-    { id: 'p-2', category: 'Pantalones', name: 'Jean Oslo', size: '38', cost: 26000, price: 52000, stock: 7, image_url: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=800&q=80' },
-    { id: 'p-3', category: 'Básicos', name: 'Remera Nube', size: 'S', cost: 11500, price: 25000, stock: 1, image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80' },
-    { id: 'p-4', category: 'Tejidos', name: 'Sweater Roma', size: 'Único', cost: 29000, price: 59000, stock: 4, image_url: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=800&q=80' },
-    { id: 'p-5', category: 'Accesorios', name: 'Cartera Mini', size: 'Único', cost: 18000, price: 41000, stock: 0, image_url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80' },
-  ],
-  sales: [
-    { id: 's-1', date: '2024-05-24', customerId: 'c-1', customerName: 'Lucía Benítez', productId: 'p-1', productName: 'Campera Roma', size: 'M', quantity: 1, unitPrice: 79000, method: 'Transferencia', status: 'Cobrado', paidAmount: 79000 },
-    { id: 's-2', date: '2024-05-23', customerId: 'c-2', customerName: 'Micaela Ríos', productId: 'p-2', productName: 'Jean Oslo', size: '38', quantity: 1, unitPrice: 52000, method: 'Efectivo', status: 'Pendiente', paidAmount: 20000 },
-    { id: 's-3', date: '2024-05-22', customerId: 'c-3', customerName: 'Sofía Acosta', productId: 'p-3', productName: 'Remera Nube', size: 'S', quantity: 2, unitPrice: 25000, method: 'Mercado Pago', status: 'Cobrado', paidAmount: 50000 },
-    { id: 's-4', date: '2024-05-20', customerId: 'c-4', customerName: 'Carla Duarte', productId: 'p-4', productName: 'Sweater Roma', size: 'Único', quantity: 1, unitPrice: 59000, method: 'Efectivo', status: 'Pendiente', paidAmount: 0 },
-    { id: 's-5', date: '2024-05-18', customerId: 'c-1', customerName: 'Lucía Benítez', productId: 'p-2', productName: 'Jean Oslo', size: '38', quantity: 1, unitPrice: 52000, method: 'Transferencia', status: 'Cobrado', paidAmount: 52000 },
-  ],
-  expenses: [
-    { id: 'e-1', date: '2024-05-23', concept: 'Compra mayorista · Nueva temporada', category: 'Mercadería', amount: 88000 },
-    { id: 'e-2', date: '2024-05-21', concept: 'Envíos y cadetería', category: 'Logística', amount: 7200 },
-    { id: 'e-3', date: '2024-05-18', concept: 'Packaging', category: 'Insumos', amount: 12900 },
-  ],
-};
+type SyncStatus = 'loading' | 'ready' | 'saving' | 'error';
+type StateResponse = { revision: number; store: Store };
+const API_STATE_URL = '/api/state';
+
+async function fetchStore(): Promise<StateResponse> {
+  const response = await fetch(API_STATE_URL, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`No se pudo cargar el estado (${response.status})`);
+  return response.json() as Promise<StateResponse>;
+}
 
 function useStore() {
-  const [store, setStore] = useState<Store>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return demoStore;
-    const parsed = JSON.parse(saved) as Store;
-    return {
-      ...parsed,
-      products: parsed.products.map((product) => ({
-        ...product,
-        image_url: product.image_url || demoStore.products.find((demoProduct) => demoProduct.id === product.id)?.image_url || '',
-      })),
+  const [store, setStore] = useState<Store | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
+  const revisionRef = useRef<number | null>(null);
+  const storeRef = useRef<Store | null>(null);
+  const saveQueueRef = useRef(Promise.resolve());
+  const pendingWritesRef = useRef(0);
+  const conflictRef = useRef(false);
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetchStore();
+      revisionRef.current = response.revision;
+      storeRef.current = response.store;
+      setStore(response.store);
+      conflictRef.current = false;
+      setSyncStatus('ready');
+    } catch {
+      setSyncStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+    const refresh = async () => {
+      if (pendingWritesRef.current > 0 || conflictRef.current) return;
+      try {
+        const response = await fetchStore();
+        if (response.revision !== revisionRef.current) {
+          revisionRef.current = response.revision;
+          storeRef.current = response.store;
+          setStore(response.store);
+        }
+        setSyncStatus('ready');
+      } catch {
+        setSyncStatus('error');
+      }
     };
-  });
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }, [store]);
-  return [store, setStore] as const;
+    const interval = window.setInterval(refresh, 5000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [load]);
+
+  const updateStore = useCallback<React.Dispatch<React.SetStateAction<Store>>>((updater) => {
+    const current = storeRef.current;
+    if (!current || revisionRef.current === null || conflictRef.current) return;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+    storeRef.current = next;
+    setStore(next);
+    pendingWritesRef.current += 1;
+    setSyncStatus('saving');
+    const persist = async () => {
+      if (conflictRef.current || revisionRef.current === null) return;
+      const response = await fetch(API_STATE_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ revision: revisionRef.current, store: next }),
+      });
+      if (response.status === 409) {
+        const remote = await fetchStore();
+        revisionRef.current = remote.revision;
+        storeRef.current = remote.store;
+        setStore(remote.store);
+        conflictRef.current = true;
+        setSyncStatus('error');
+        throw new Error('Conflicto de sincronización');
+      }
+      if (!response.ok) throw new Error(`No se pudo guardar el estado (${response.status})`);
+      const saved = await response.json() as StateResponse;
+      revisionRef.current = saved.revision;
+      setSyncStatus('ready');
+    };
+    saveQueueRef.current = saveQueueRef.current
+      .then(persist)
+      .catch(() => setSyncStatus('error'))
+      .finally(() => {
+        pendingWritesRef.current = Math.max(0, pendingWritesRef.current - 1);
+      });
+  }, []);
+
+  return [store, updateStore, syncStatus, load] as const;
 }
 
 function Button({ children, variant = 'primary', className = '', onClick, type = 'button', disabled = false, title }: {
@@ -460,11 +510,14 @@ function Expenses({ store, setStore, openForm, setOpenForm }: { store: Store; se
 }
 
 function App() {
-  const [store, setStore] = useStore(); const [view, setView] = useState<View>('dashboard'); const [sidebarOpen, setSidebarOpen] = useState(false); const [formOpen, setFormOpen] = useState(false); const [flash, setFlash] = useState<string | null>(null);
-  const updateStore: React.Dispatch<React.SetStateAction<Store>> = (updater) => { setStore(updater); setFlash('Cambios guardados'); window.setTimeout(() => setFlash(null), 2600); };
+  const [store, setStore, syncStatus, reload] = useStore(); const [view, setView] = useState<View>('dashboard'); const [sidebarOpen, setSidebarOpen] = useState(false); const [formOpen, setFormOpen] = useState(false); const [flash, setFlash] = useState<string | null>(null);
+  const updateStore: React.Dispatch<React.SetStateAction<Store>> = (updater) => { setStore(updater); setFlash('Guardando cambios…'); window.setTimeout(() => setFlash(null), 2600); };
   const openAdd = () => { if (view === 'dashboard') setView('sales'); setFormOpen(true); };
+  if (!store && syncStatus === 'error') return <div className="grid min-h-[100dvh] place-items-center bg-[#252938] p-6 text-center text-[#f8f3ec]"><div><p className="serif text-3xl">No se pudo conectar</p><p className="mt-2 text-sm text-white/70">La aplicación necesita acceder al servidor y a PostgreSQL.</p><button onClick={() => void reload()} className="mt-5 rounded-xl bg-[#d86343] px-4 py-2.5 text-sm font-bold">Reintentar</button></div></div>;
+  if (!store) return <div className="grid min-h-[100dvh] place-items-center bg-[#252938] text-[#f8f3ec]"><div className="text-center"><p className="serif text-3xl">Cargando KINSH1P…</p><p className="mt-2 text-sm text-white/70">Conectando con tus datos.</p></div></div>;
   const page = view === 'dashboard' ? <Dashboard store={store} setView={setView} /> : view === 'sales' ? <Sales store={store} setStore={updateStore} openForm={formOpen} setOpenForm={setFormOpen} /> : view === 'customers' ? <Customers store={store} setStore={updateStore} openForm={formOpen} setOpenForm={setFormOpen} /> : view === 'inventory' ? <Inventory store={store} setStore={updateStore} openForm={formOpen} setOpenForm={setFormOpen} /> : <Expenses store={store} setStore={updateStore} openForm={formOpen} setOpenForm={setFormOpen} />;
-  return <div className="app-shell"><Sidebar view={view} setView={(v) => { setView(v); setFormOpen(false); }} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />{sidebarOpen && <button data-testid="button-sidebar-overlay" className="fixed inset-0 z-30 bg-[hsl(224_28%_19%/.35)] lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Cerrar menú" />}<main className="min-h-[100dvh] lg:pl-[252px]"><div className="mx-auto max-w-[1440px] px-4 py-5 sm:px-7 sm:py-8 lg:px-10"><Header view={view} onMenu={() => setSidebarOpen(true)} onAdd={openAdd} />{page}<footer className="mt-10 flex items-center justify-between border-t border-white/15 py-5 text-xs text-white/55"><span>KINSH1P · datos guardados en este dispositivo</span><span className="hidden sm:inline">Versión local 1.0</span></footer></div></main>{flash && <div data-testid="status-saved" className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-xl bg-[#244d3b] px-4 py-3 text-sm font-bold text-[#f2f7ed] shadow-xl"><Check size={16} /> {flash}</div>}</div>;
+  const syncLabel = syncStatus === 'saving' ? 'Guardando en PostgreSQL…' : syncStatus === 'error' ? 'Sin conexión' : 'Sincronizado';
+  return <div className="app-shell"><Sidebar view={view} setView={(v) => { setView(v); setFormOpen(false); }} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />{sidebarOpen && <button data-testid="button-sidebar-overlay" className="fixed inset-0 z-30 bg-[hsl(224_28%_19%/.35)] lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Cerrar menú" />}<main className="min-h-[100dvh] lg:pl-[252px]"><div className="mx-auto max-w-[1440px] px-4 py-5 sm:px-7 sm:py-8 lg:px-10"><Header view={view} onMenu={() => setSidebarOpen(true)} onAdd={openAdd} />{page}<footer className="mt-10 flex items-center justify-between border-t border-white/15 py-5 text-xs text-white/55"><span>KINSH1P · {syncLabel}</span><span className="hidden sm:inline">Datos compartidos entre dispositivos</span></footer></div></main>{flash && <div data-testid="status-saved" className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-xl bg-[#244d3b] px-4 py-3 text-sm font-bold text-[#f2f7ed] shadow-xl"><Check size={16} /> {flash}</div>}</div>;
 }
 
 export default App;

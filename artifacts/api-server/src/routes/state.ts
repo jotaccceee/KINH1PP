@@ -34,14 +34,12 @@ type Entity = Store[keyof Store][number];
 const router: IRouter = Router();
 
 async function readState(query: (sql: string, values?: unknown[]) => Promise<{ rows: any[] }>) {
-  const [versions, customers, products, sales, items, expenses] = await Promise.all([
-    query("SELECT revision FROM state_version WHERE id = 1"),
-    query('SELECT id, name, phone, notes, created_at AS "createdAt" FROM customers ORDER BY created_at DESC, id DESC'),
-    query('SELECT id, category, name, size, cost, price, stock, image_url FROM products ORDER BY id DESC'),
-    query('SELECT id, date, customer_id AS "customerId", customer_name AS "customerName", product_id AS "productId", product_name AS "productName", size, quantity, unit_price AS "unitPrice", method, status, paid_amount AS "paidAmount", total, saldo_pendiente AS "saldoPendiente" FROM sales ORDER BY date DESC, id DESC'),
-    query('SELECT sale_id, product_id AS "productId", product_name AS "productName", size, detail, quantity, unit_price AS "unitPrice" FROM sale_items ORDER BY position'),
-    query("SELECT id, date, concept, category, amount FROM expenses ORDER BY date DESC, id DESC"),
-  ]);
+  const versions = await query("SELECT revision FROM state_version WHERE id = 1");
+  const customers = await query('SELECT id, name, phone, notes, created_at AS "createdAt" FROM customers ORDER BY created_at DESC, id DESC');
+  const products = await query('SELECT id, category, name, size, cost, price, stock, image_url FROM products ORDER BY id DESC');
+  const sales = await query('SELECT id, date, customer_id AS "customerId", customer_name AS "customerName", product_id AS "productId", product_name AS "productName", size, quantity, unit_price AS "unitPrice", method, status, paid_amount AS "paidAmount", total, saldo_pendiente AS "saldoPendiente" FROM sales ORDER BY date DESC, id DESC');
+  const items = await query('SELECT sale_id, product_id AS "productId", product_name AS "productName", size, detail, quantity, unit_price AS "unitPrice" FROM sale_items ORDER BY position');
+  const expenses = await query("SELECT id, date, concept, category, amount FROM expenses ORDER BY date DESC, id DESC");
   const itemsBySale = new Map<string, any[]>();
   for (const { sale_id, ...item } of items.rows) {
     const list = itemsBySale.get(sale_id) ?? [];
