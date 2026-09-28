@@ -115,6 +115,9 @@ router.put("/state", async (req, res): Promise<void> => {
       if (nextMap.size !== next[key].length) throw new Error(`Duplicate ID in ${key}`);
       for (const [entityId, before] of oldMap) {
         if (nextMap.has(entityId)) continue;
+        if (key === "sales") {
+          await client.query("DELETE FROM payments WHERE sale_id = $1", [entityId]);
+        }
         await client.query(`DELETE FROM ${config.table} WHERE id = $1`, [entityId]);
         changes.push({ entity: key, entityId, action: "deleted", before, after: null });
       }

@@ -309,6 +309,20 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
      setActiveProductSearch(null);
     setOpenForm(false);
   };
+  const removeSale = (sale: Sale) => {
+    if (!window.confirm(`¿Eliminar la venta de ${sale.customerName}? El stock volverá al inventario.`)) return;
+    const quantitiesByProduct = saleItems(sale).reduce<Record<string, number>>((quantities, item) => ({
+      ...quantities,
+      [item.productId]: (quantities[item.productId] || 0) + item.quantity,
+    }), {});
+    setStore((prev) => ({
+      ...prev,
+      sales: prev.sales.filter((item) => item.id !== sale.id),
+      products: prev.products.map((product) => quantitiesByProduct[product.id]
+        ? { ...product, stock: product.stock + quantitiesByProduct[product.id] }
+        : product),
+    }));
+  };
 
   return <div className="space-y-5 fade-in">
     <div className="paper-card flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center">
@@ -317,7 +331,7 @@ function Sales({ store, setStore, openForm, setOpenForm }: { store: Store; setSt
     </div>
     <section className="paper-card overflow-hidden rounded-2xl">
       <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-5 py-4"><div><h2 className="font-bold">Historial de ventas</h2><p className="mt-0.5 text-xs text-[hsl(var(--muted-foreground))]">{filtered.length} registros encontrados</p></div><Button title="nueva venta" onClick={() => setOpenForm(true)}><Plus size={16} /> Nueva venta</Button></div>
-      {filtered.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-[hsl(var(--muted)/.55)] text-xs uppercase tracking-[.08em] text-[hsl(var(--muted-foreground))]"><tr><th className="px-5 py-3 font-bold">Fecha</th><th className="px-5 py-3 font-bold">Cliente</th><th className="px-5 py-3 font-bold">Prendas</th><th className="px-5 py-3 font-bold">Pago</th><th className="px-5 py-3 text-right font-bold">Total</th><th className="px-5 py-3 text-right font-bold">Estado</th></tr></thead><tbody className="divide-y divide-[hsl(var(--border))]">{filtered.map((sale) => <tr className="transition hover:bg-[hsl(var(--muted)/.38)]" key={sale.id}><td className="px-5 py-4 text-[hsl(var(--muted-foreground))]">{dateLabel(sale.date)}</td><td className="px-5 py-4 font-semibold">{sale.customerName}</td><td className="px-5 py-4"><div className="space-y-1">{saleItems(sale).map((item, index) => <div key={`${sale.id}-${index}`}><span className="font-semibold">{item.productName}</span><span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">{item.size} · x{item.quantity}</span></div>)}</div></td><td className="px-5 py-4 text-[hsl(var(--muted-foreground))]">{sale.method}</td><td className="px-5 py-4 text-right font-bold">{money(saleTotal(sale))}</td><td className="px-5 py-4 text-right"><Badge tone={sale.status === 'Cobrado' ? 'green' : 'orange'}>{sale.status}{saleBalance(sale) > 0 && ` · ${money(saleBalance(sale))}`}</Badge></td></tr>)}</tbody></table></div> : <div className="p-5"><EmptyState icon={ShoppingBag} title="No encontramos ventas" detail="Probá cambiar los filtros o registrá una venta nueva." action={<Button title="nueva venta" onClick={() => setOpenForm(true)}><Plus size={16} /> Registrar venta</Button>} /></div>}
+      {filtered.length ? <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-[hsl(var(--muted)/.55)] text-xs uppercase tracking-[.08em] text-[hsl(var(--muted-foreground))]"><tr><th className="px-5 py-3 font-bold">Fecha</th><th className="px-5 py-3 font-bold">Cliente</th><th className="px-5 py-3 font-bold">Prendas</th><th className="px-5 py-3 font-bold">Pago</th><th className="px-5 py-3 text-right font-bold">Total</th><th className="px-5 py-3 text-right font-bold">Estado</th><th className="px-5 py-3 text-right font-bold">Acciones</th></tr></thead><tbody className="divide-y divide-[hsl(var(--border))]">{filtered.map((sale) => <tr className="transition hover:bg-[hsl(var(--muted)/.38)]" key={sale.id}><td className="px-5 py-4 text-[hsl(var(--muted-foreground))]">{dateLabel(sale.date)}</td><td className="px-5 py-4 font-semibold">{sale.customerName}</td><td className="px-5 py-4"><div className="space-y-1">{saleItems(sale).map((item, index) => <div key={`${sale.id}-${index}`}><span className="font-semibold">{item.productName}</span><span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">{item.size} · x{item.quantity}</span></div>)}</div></td><td className="px-5 py-4 text-[hsl(var(--muted-foreground))]">{sale.method}</td><td className="px-5 py-4 text-right font-bold">{money(saleTotal(sale))}</td><td className="px-5 py-4 text-right"><Badge tone={sale.status === 'Cobrado' ? 'green' : 'orange'}>{sale.status}{saleBalance(sale) > 0 && ` · ${money(saleBalance(sale))}`}</Badge></td><td className="px-5 py-4 text-right"><button type="button" data-testid={`button-delete-sale-${sale.id}`} onClick={() => removeSale(sale)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50" aria-label={`Eliminar venta de ${sale.customerName}`} title="Eliminar venta"><Trash2 size={15} /><span>Eliminar</span></button></td></tr>)}</tbody></table></div> : <div className="p-5"><EmptyState icon={ShoppingBag} title="No encontramos ventas" detail="Probá cambiar los filtros o registrá una venta nueva." action={<Button title="nueva venta" onClick={() => setOpenForm(true)}><Plus size={16} /> Registrar venta</Button>} /></div>}
     </section>
     <Modal open={openForm} onClose={() => setOpenForm(false)} title="Registrar una venta">
       <form onSubmit={submit} className="space-y-5">
