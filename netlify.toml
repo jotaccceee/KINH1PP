@@ -1,7 +1,6 @@
 [build]
-  base = "artifacts/moda-control"
-  command = "pnpm build"
-  publish = "dist"
+  command = "pnpm --filter moda-control build"
+  publish = "artifacts/moda-control/dist"
 
 [build.environment]
   PORT = "3000"
