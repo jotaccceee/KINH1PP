@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm --filter moda-control build"
+  command = "cd artifacts/moda-control && pnpm run build"
   publish = "artifacts/moda-control/dist"
 
 [build.environment]
