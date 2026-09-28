@@ -1,7 +1,13 @@
 [build]
-  command = "pnpm --filter moda-control build"
-  publish = "artifacts/moda-control/dist"
+  base = "artifacts/moda-control"
+  command = "pnpm build"
+  publish = "dist"
 
 [build.environment]
   PORT = "3000"
   BASE_PATH = "/"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
