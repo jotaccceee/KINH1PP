@@ -1,5 +1,5 @@
 [build]
-  command = "cd artifacts/moda-control && pnpm run build && mkdir -p ../../dist && cp -r dist/* ../../dist/"
+  command = "cd artifacts/moda-control && pnpm run build && mkdir -p ../../dist && cp -r dist/. ../../dist/ && ls -la ../../dist"
   publish = "dist"
 
 [build.environment]
