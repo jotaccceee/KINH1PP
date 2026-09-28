@@ -4,3 +4,4 @@
 
 [build.environment]
   PORT = "3000"
+  BASE_PATH = "/"
